@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Help — case study</title>
+<meta name="description" content="AI Help: a RAG assistant answering from product documentation in a low-resource language — evaluation methodology, glossary-based translation and access control. Case study by Ina Arechowska.">
+<style>
+:root{
+  --bg:#ffffff; --surface:#f6f7f9; --text:#1d1d1f; --muted:#5f6368; --line:#e3e6eb;
+  --accent:#2f5fd0; --accent-soft:#eaf0fd; --ok:#1f7a4d; --warn:#9a5b00;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121316; --surface:#1b1d21; --text:#ececee; --muted:#a3a7ae; --line:#2c2f35;
+    --accent:#8fb0ff; --accent-soft:#1f2a44; --ok:#5fc796; --warn:#e0a54b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121316; --surface:#1b1d21; --text:#ececee; --muted:#a3a7ae; --line:#2c2f35;
+  --accent:#8fb0ff; --accent-soft:#1f2a44; --ok:#5fc796; --warn:#e0a54b;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:56px 16px 80px}
+h1{font-size:44px;line-height:1.1;letter-spacing:-.02em;margin:0 0 12px}
+h2{font-size:26px;letter-spacing:-.01em;margin:64px 0 16px}
+h3{font-size:18px;margin:0 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lead{font-size:21px;color:var(--muted);margin-bottom:20px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+.chip{font-size:14px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--surface)}
+.grid{display:grid;gap:14px}
+@media(min-width:700px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card p{margin:0;color:var(--muted);font-size:16px}
+.decision{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:14px}
+.decision dl{display:grid;grid-template-columns:96px 1fr;gap:6px 14px;margin:10px 0 0;font-size:16px}
+.decision dt{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding-top:3px}
+.decision dd{margin:0}
+table{width:100%;border-collapse:collapse;font-size:15px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+ul.clean{padding-left:20px;margin:0}
+ul.clean li{margin:4px 0}
+.note{border-left:3px solid var(--warn);padding:4px 0 4px 16px;color:var(--text);margin:18px 0}
+figure{margin:18px 0}
+figure img{width:100%;height:auto;border:1px solid var(--line);border-radius:12px;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px}
+.timeline{list-style:none;padding:0;margin:0;border-left:2px solid var(--line)}
+.timeline li{position:relative;padding:0 0 16px 22px}
+.timeline li::before{content:"";position:absolute;left:-7px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.timeline b{display:inline-block;min-width:110px}
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.diagram svg{width:100%;height:auto;display:block}
+.placeholder{border:1px dashed var(--line);border-radius:14px;padding:28px;text-align:center;color:var(--muted);background:var(--surface)}
+footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+code{font-family:var(--mono);font-size:.9em;background:var(--accent-soft);padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>AI Help</h1>
+  <p class="lead">A RAG assistant that answers users from the product documentation — in their own low-resource language, with a link to the source, and only from the documents of their own organisation.</p>
+  <p>I was the product owner in a team of three: requirements, the evaluation methodology and the testing itself, the glossary and translation workflow, materials. Colleagues built the platform and the translation pipeline. This page explains how we measured quality and what the numbers changed.</p>
+  <div class="meta">
+    <span class="chip">2026</span>
+    <span class="chip">Enterprise financial software</span>
+    <span class="chip">Team of 3</span>
+    <span class="chip">Role: product owner, evaluation &amp; testing</span>
+    <span class="chip">RAG · LLM evaluation · machine translation</span>
+  </div>
+</header>
+
+<section>
+  <h2>The problem</h2>
+  <p>The user documentation exists in one language only. Users who speak another — a low-resource language with little training data for models — struggle to find and understand answers, so they go to support.</p>
+  <p>The question to answer: can an AI assistant close this gap — a question in the user’s own language, an answer with a link to the source, and never a document from another client?</p>
+</section>
+
+<section>
+  <h2>What was built</h2>
+  <div class="grid three">
+    <div class="card"><h3>Answers in the user’s language</h3><p>Interface and answers in the target language, with a link to the source section.</p></div>
+    <div class="card"><h3>Access by client and language</h3><p>Each user sees only the documents of their own organisation, in their language.</p></div>
+    <div class="card"><h3>Quality you can see</h3><p>Answer rating and analytics built in, so quality is measured, not assumed.</p></div>
+  </div>
+  <p style="margin-top:14px">Eight user guides were translated into the target language with machine translation guided by a glossary confirmed by a native speaker.</p>
+</section>
+
+<section>
+  <h2>How it works</h2>
+  <div class="diagram" role="img" aria-label="Source documentation is translated with a glossary, indexed per client and language; the assistant answers with a source link; every run is evaluated">
+    <svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="14">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <g style="color:var(--muted)" stroke="currentColor" fill="none" stroke-width="1.5">
+        <rect x="10" y="20" width="160" height="62" rx="10" style="fill:var(--surface);stroke:var(--line)"/>
+        <rect x="200" y="20" width="160" height="62" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+        <rect x="390" y="20" width="160" height="62" rx="10" style="fill:var(--surface);stroke:var(--line)"/>
+        <rect x="580" y="20" width="170" height="62" rx="10" style="fill:var(--surface);stroke:var(--line)"/>
+        <rect x="290" y="136" width="260" height="62" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+        <path d="M170 51 L198 51" marker-end="url(#ar)"/>
+        <path d="M360 51 L388 51" marker-end="url(#ar)"/>
+        <path d="M550 51 L578 51" marker-end="url(#ar)"/>
+        <path d="M665 82 C665 140 600 167 552 167" marker-end="url(#ar)"/>
+        <path d="M290 167 C220 167 280 110 280 84" marker-end="url(#ar)"/>
+      </g>
+      <g style="fill:var(--text)">
+        <text x="90" y="46" text-anchor="middle" font-weight="600">Source docs</text>
+        <text x="90" y="65" text-anchor="middle" style="fill:var(--muted)" font-size="12">one language</text>
+        <text x="280" y="46" text-anchor="middle" font-weight="600">Translation</text>
+        <text x="280" y="65" text-anchor="middle" style="fill:var(--muted)" font-size="12">MT + verified glossary</text>
+        <text x="470" y="46" text-anchor="middle" font-weight="600">Index</text>
+        <text x="470" y="65" text-anchor="middle" style="fill:var(--muted)" font-size="12">per client and language</text>
+        <text x="665" y="46" text-anchor="middle" font-weight="600">Answer</text>
+        <text x="665" y="65" text-anchor="middle" style="fill:var(--muted)" font-size="12">with source link</text>
+        <text x="420" y="162" text-anchor="middle" font-weight="600">Evaluation</text>
+        <text x="420" y="181" text-anchor="middle" style="fill:var(--muted)" font-size="12">runs · references · blind review</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<section>
+  <h2>The evaluation methodology</h2>
+  <p>The core of the project was not the assistant but the way to know whether it can be trusted.</p>
+  <div class="grid two">
+    <div class="card"><h3>Reference answers first</h3><p>A set of questions with reference answers written before any run — plus questions the system had never seen and a sample of real user requests.</p></div>
+    <div class="card"><h3>Repeated runs</h3><p>Automated runs after every change, so each decision is compared on the same set.</p></div>
+    <div class="card"><h3>Blind review</h3><p>Two raters score answers without knowing the version, on an agreed scale: full, partial, wrong.</p></div>
+    <div class="card"><h3>Access checks</h3><p>Questions designed to pull another client’s documents.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>What the numbers changed</h2>
+
+  <div class="decision">
+    <h3>Translate the documentation, not the conversation</h3>
+    <dl>
+      <dt>Problem</dt><dd>Translating the question and the answer on the fly gave full answers in less than half of the cases.</dd>
+      <dt>Choice</dt><dd>Translate the documentation itself with a glossary and improve retrieval. Two weeks later: about 70% full answers on the first try.</dd>
+    </dl>
+  </div>
+
+  <div class="decision">
+    <h3>Real requests are harder than invented ones</h3>
+    <dl>
+      <dt>Problem</dt><dd>Real user requests scored noticeably lower than prepared questions.</dd>
+      <dt>Choice</dt><dd>Keep them in the set and report them separately — the gap is the honest picture of production.</dd>
+    </dl>
+  </div>
+
+  <div class="decision">
+    <h3>Launch with a checkpoint, not everywhere at once</h3>
+    <dl>
+      <dt>Problem</dt><dd>The production bar was not reached yet.</dd>
+      <dt>Choice</dt><dd>Recommend a launch for one client with a control point, instead of rounding the numbers up.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <h2>Results</h2>
+  <div class="grid three">
+    <div class="card"><h3>≈80%</h3><p>full answers in the target language after one clarification; over 90% including partially correct</p></div>
+    <div class="card"><h3>80%+</h3><p>full answers in the source language on the first try</p></div>
+    <div class="card"><h3>0</h3><p>answers with another client’s documents in access checks</p></div>
+  </div>
+  <p class="note"><b>Honestly about the status.</b> This is an MVP, not a production service. The numbers come from controlled runs; production quality will be known after the first launch.</p>
+</section>
+
+<section>
+  <h2>My role and the team</h2>
+  <p><b>Ina Arechowska</b> — product owner: requirements, evaluation methodology, test sets and references, running and scoring the tests, glossary and translation workflow, materials.</p>
+  <p>Two colleagues — the platform and the translation pipeline.</p>
+</section>
+
+<section>
+  <h2>Code</h2>
+  <p>Internal project, sources are private. More on request — <a href="https://github.com/arechowska">github.com/arechowska</a>.</p>
+</section>
+
+<footer>© 2026 Ina Arechowska. All rights reserved.</footer>
+
+</main>
+</body>
+</html>
