@@ -114,6 +114,19 @@ main li{margin:0 0 6px}
   h2{font-size:24px}
   h1{font-size:32px}
 }
+/*nav2*/
+:root{--wine:#6e2333}
+@media (prefers-color-scheme: dark){:root{--wine:#e39aa6}}
+nav .name{color:var(--wine);font-size:18px;letter-spacing:-.01em}
+nav a:not(.name){padding:4px 10px;border-radius:999px;transition:background .15s,color .15s}
+nav a:not(.name):hover,nav a[aria-current]{background:var(--accent-soft);color:var(--accent)}
+nav .wrap{gap:8px}
+@media(max-width:600px){nav .wrap{gap:0;padding:0 12px;justify-content:space-between}nav a:not(.name){padding:4px 6px;font-size:13.5px}}
+.wb{background:#f8f1f2;border-left:3px solid #8c3a4a;border-radius:0 6px 6px 0;padding:12px 18px;max-width:720px}
+.wb p,.wb ul{margin:0}.wb li{margin:0 0 6px}.wb li:last-child{margin:0}
+.wbh{color:var(--wine)}
+.wbh::before{background:var(--wine)}
+@media (prefers-color-scheme: dark){.wb{background:#2a1a1d;border-left-color:#c46a7a}}
 </style>
 </head>
 <body>
@@ -177,8 +190,8 @@ main li{margin:0 0 6px}
   <div class="dec"><h3>Translate the documentation, not the conversation</h3><dl><dt>Problem</dt><dd>Translating the question and the answer on the fly gave full answers in less than half of the cases.</dd><dt>Choice</dt><dd>Translate the guides with a glossary and improve retrieval.</dd></dl></div><div class="dec"><h3>Real requests counted separately</h3><dl><dt>Problem</dt><dd>Real user requests scored lower than the questions we prepared.</dd><dt>Choice</dt><dd>Keep them in the set and report them on their own.</dd></dl></div>
 </section>
 <section>
-  <h2>Where it broke</h2>
-  <ul><li>Search in the user’s language found the wrong section far more often than in the source language.</li><li>Translation checks caught form, not meaning: a guide could pass every check and still say the wrong thing.</li></ul>
+  <h2 class="wbh">Where it broke</h2>
+  <div class="wb"><ul><li>Search in the user’s language found the wrong section far more often than in the source language.</li><li>Translation checks caught form, not meaning: a guide could pass every check and still say the wrong thing.</li></ul></div>
 </section>
 <section>
   <h2>Results</h2>
